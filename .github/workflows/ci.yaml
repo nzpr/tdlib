@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-14
+    env:
+      CI: "false" #"true" -> set to true to build all platforms once toolchains are implemented properly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          recursive: true
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+          architecture: arm64
+          cache: sbt
+
+      - name: Install dependencies (macOS)
+        run: |
+          brew update
+          brew install cmake ninja zip gperf
+
+      - name: Install sbt
+        run: brew install sbt
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "latest"  
+
+      - name: Build native libraries 
+        run: ./buildtd.sh
+
+      - name: Build Scala library
+        run: sbt +compile +publishLocal
+
+      - name: Upload native artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-libs
+          path: src/main/resources/native
+
+  test-matrix:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-14] # [ubuntu-latest, macos-latest, windows-latest]
+        arch: [aarch64] # [x86_64, aarch64]
+    env:
+      CI: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+          architecture: arm64
+          cache: sbt
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: native-libs
+          path: src/main/resources/native
+
+      - name: Install sbt
+        run: brew install sbt
+
+      - name: Run tests
+        run: sbt test
