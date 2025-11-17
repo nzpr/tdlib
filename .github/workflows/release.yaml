@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: macos-14
+    env:
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          recursive: true
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: arm64
+
+      - name: Install dependencies (macOS)
+        run: |
+          brew update
+          brew install cmake ninja zip gperf
+
+      - name: Install sbt
+        run: brew install sbt
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "latest"
+
+      - name: Build native libraries
+        run: ./buildtd.sh
+
+      - name: Package platform-specific native libraries
+        run: |
+          cd src/main/resources/native
+          for dir in */; do
+            platform="${dir%/}"
+            zip -r "../../../../native-${platform}.zip" "$platform/"
+          done
+
+      - name: Upload native libraries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: native-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Import GPG key
+      #   run: |
+      #     echo "${{ secrets.PGP_SECRET }}" | base64 --decode | gpg --import --batch --yes
+      #
+      # - name: Create credentials file
+      #   run: |
+      #     mkdir -p ~/.sbt
+      #     cat > ~/.sbt/sonatype_credentials << EOF
+      #     realm=Sonatype Nexus Repository Manager
+      #     host=s01.oss.sonatype.org
+      #     user=${{ secrets.SONATYPE_USERNAME }}
+      #     password=${{ secrets.SONATYPE_PASSWORD }}
+      #     EOF
+      #
+      # - name: Update version from tag
+      #   run: |
+      #     TAG=${GITHUB_REF#refs/tags/}
+      #     VERSION=${TAG#v}
+      #     sed -i '' "s/version := \".*\"/version := \"$VERSION\"/" build.sbt
+      #
+      # - name: Publish to Sonatype
+      #   run: sbt +publishSigned
+      #   env:
+      #     PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+      #
+      # - name: Release to Maven Central
+      #   run: sbt sonatypeBundleRelease
+      #   env:
+      #     PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}

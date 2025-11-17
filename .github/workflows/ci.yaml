@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-14
+    env:
+      CI: "false" #"true" -> set to true to build all platforms once toolchains are implemented properly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          recursive: true
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: arm64
+
+      - name: Install dependencies (macOS)
+        run: |
+          brew update
+          brew install cmake ninja zip gperf
+
+      - name: Install sbt
+        run: brew install sbt
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "latest"  
+
+      - name: Build native libraries 
+        run: ./buildtd.sh
+
+      - name: Build Scala library
+        run: sbt +compile +publishLocal
+
+      - name: Create native libs archive
+        run: |
+          cd src/main/resources
+          zip -r ../../../native-libs.zip native/
+
+      - name: Upload native artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-libs
+          path: native-libs.zip
+
+  test-matrix:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Ubuntu: only x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+          # macOS: both x86_64 and arm64
+          - os: macos-latest
+            arch: x86_64
+          - os: macos-latest
+            arch: aarch64
+          # Windows: only x86_64 (hosted runners are x86_64)
+          - os: windows-latest
+            arch: x86_64
+    env:
+      CI: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: ${{ matrix.arch }}
+
+      - name: Install sbt (sbt-extras script)
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/dwijnand/sbt-extras/master/sbt -o sbt
+          chmod +x sbt
+          mkdir -p ~/.local/bin
+          mv sbt ~/.local/bin/sbt
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: native-libs
+          path: .
+
+      - name: Extract native libraries
+        run: |
+          unzip native-libs.zip -d src/main/resources
+
+      - name: Run tests
+        run: sbt test

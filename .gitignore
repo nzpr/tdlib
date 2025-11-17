@@ -1,0 +1,44 @@
+# === Scala / Java ===
+*.class
+*.log
+*.ctxt
+
+# === SBT ===
+target/
+.project
+.cache
+.history
+.idea_modules/
+.metals/
+metals.sbt
+
+# Bloop / Metals
+.bloop/
+.metals/
+.vscode/
+
+# === Mill ===
+out/
+
+# === Scala CLI ===
+.scala-build/
+
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+
+# === Eclipse ===
+.scala_dependencies
+.worksheet/
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+
+# === Optional ===
+# If you store secrets in env files:
+# *.env
+
+.build
+.bsp/
+src/main/resources/native/
