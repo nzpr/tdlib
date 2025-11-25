@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: macos-14
     env:
-      CI: "false" #"true" -> set to true to build all platforms once toolchains are implemented properly
+      CI: "false" 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,17 +61,18 @@ jobs:
     strategy:
       matrix:
         include:
+          - os: macos-14
           # Ubuntu: only x86_64
-          - os: ubuntu-latest
-            arch: x86_64
+          # - os: ubuntu-latest
+          #   arch: x86_64
           # macOS: both x86_64 and arm64
-          - os: macos-latest
-            arch: x86_64
-          - os: macos-latest
-            arch: aarch64
+          # - os: macos-latest
+          #   arch: x86_64
+          # - os: macos-latest
+          #   arch: aarch64
           # Windows: only x86_64 (hosted runners are x86_64)
-          - os: windows-latest
-            arch: x86_64
+          # - os: windows-latest
+          #   arch: x86_64
     env:
       CI: "false"
     steps:

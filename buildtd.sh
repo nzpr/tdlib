@@ -55,10 +55,10 @@ echo "Host detected: $HOST_OS-$HOST_ARCH"
 # Only build host target locally
 # -------------------------------
 ALL_TARGETS=(
-  "linux:x86_64:x86_64-linux-gnu"
-  "macos:x86_64:x86_64-macos-gnu"
+  # "linux:x86_64:x86_64-linux-gnu"
+  # "macos:x86_64:x86_64-macos-gnu"
   "macos:aarch64:aarch64-macos-gnu"
-  "windows:x86_64:x86_64-windows-gnu"
+  # "windows:x86_64:x86_64-windows-gnu"
 )
 
 # Only build all platforms on CI, else only host
